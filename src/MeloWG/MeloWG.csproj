@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>MeloWG</AssemblyName>
+    <RootNamespace>MeloWG</RootNamespace>
+    <Product>Melo WG</Product>
+    <Version>1.0.0</Version>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <SatelliteResourceLanguages>ru</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- WFO0003 — совет для WinForms-приложений; здесь WinForms нужен только для значка в трее, DPI задаёт манифест WPF -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
+  <!-- Сборка для разработки без запроса прав администратора: dotnet build -p:MeloNoElevate=true -->
+  <PropertyGroup Condition="'$(MeloNoElevate)' == 'true'">
+    <ApplicationManifest>app.dev.manifest</ApplicationManifest>
+    <DefineConstants>$(DefineConstants);MELO_DEV</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\core\sing-box.exe" Link="core\sing-box.exe" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\core\LICENSE-sing-box.txt" Link="core\LICENSE-sing-box.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\core\SOURCE-sing-box.txt" Link="core\SOURCE-sing-box.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Ядро не хранится в git: понятная ошибка вместо «не найден файл» при копировании -->
+  <Target Name="CheckSingBoxCore" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)..\..\core\sing-box.exe')"
+           Text="core\sing-box.exe не найден. Скачайте ядро: powershell -ExecutionPolicy Bypass -File tools\get-core.ps1" />
+  </Target>
+
+</Project>

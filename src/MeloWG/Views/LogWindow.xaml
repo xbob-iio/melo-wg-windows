@@ -1,0 +1,51 @@
+<Window x:Class="MeloWG.Views.LogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Журнал — Melo WG" Width="820" Height="520" MinWidth="520" MinHeight="320"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg1}" Foreground="{StaticResource Text}"
+        FontFamily="{StaticResource UiFont}" FontSize="13" Icon="/Assets/app.ico" UseLayoutRounding="True">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="52" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Border x:Name="Frame" BorderBrush="{StaticResource BorderStrong}" BorderThickness="1">
+        <Grid Margin="20,0,20,18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="52" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Журнал" FontSize="15" FontWeight="SemiBold" />
+                    <TextBlock Text="События клиента и ядра sing-box — пригодится, если что-то не работает" Foreground="{StaticResource TextMuted}" FontSize="12" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Style="{StaticResource Btn.Secondary}" Padding="11,6" Click="Copy_Click" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource T.Icon}" Text="&#xE8C8;" FontSize="12" />
+                            <TextBlock x:Name="CopyText" Text="Копировать" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource Btn.Secondary}" Padding="11,6" Margin="8,0,0,0" Click="Clear_Click" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource T.Icon}" Text="&#xE894;" FontSize="12" />
+                            <TextBlock Text="Очистить" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource Btn.Icon}" Content="&#xE8BB;" FontSize="10" Margin="10,0,0,0" Click="Close_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True" />
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="1" Background="{StaticResource Bg0}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="4">
+                <TextBox x:Name="LogBox" IsReadOnly="True" BorderThickness="0" Background="Transparent" Foreground="{StaticResource Text}"
+                         FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="NoWrap" Padding="8,6"
+                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                         SelectionBrush="{StaticResource Accent}" CaretBrush="{StaticResource Text}" />
+            </Border>
+        </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+*.user
+.vs/
+
+# Ядро скачивается tools\get-core.ps1 (82 МБ, в git не храним)
+core/sing-box.exe
+core/*.dll

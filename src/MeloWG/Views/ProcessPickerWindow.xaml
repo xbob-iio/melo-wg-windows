@@ -1,0 +1,103 @@
+<Window x:Class="MeloWG.Views.ProcessPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Запущенные программы" Width="580" Height="640" MinWidth="460" MinHeight="420"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg1}" Foreground="{StaticResource Text}"
+        FontFamily="{StaticResource UiFont}" FontSize="13" UseLayoutRounding="True">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="52" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Border BorderBrush="{StaticResource BorderStrong}" BorderThickness="1">
+        <Grid Margin="20,0,20,18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="52" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Запущенные программы" FontSize="15" FontWeight="SemiBold" />
+                    <TextBlock Text="Отметьте программы, которые нужно добавить в список" Foreground="{StaticResource TextMuted}" FontSize="12" />
+                </StackPanel>
+                <Button Style="{StaticResource Btn.Icon}" Content="&#xE8BB;" FontSize="10" HorizontalAlignment="Right"
+                        Click="Cancel_Click" WindowChrome.IsHitTestVisibleInChrome="True" />
+            </Grid>
+
+            <Grid Grid.Row="1" Margin="0,12,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid>
+                    <TextBox x:Name="SearchBox" Style="{StaticResource Input}" Padding="34,8,10,8" TextChanged="Search_Changed" />
+                    <TextBlock Style="{StaticResource T.Icon}" Text="&#xE721;" FontSize="13" Foreground="{StaticResource TextFaint}"
+                               HorizontalAlignment="Left" Margin="12,0,0,0" IsHitTestVisible="False" />
+                    <TextBlock x:Name="SearchHint" Text="Поиск по имени или пути" Foreground="{StaticResource TextFaint}"
+                               VerticalAlignment="Center" Margin="36,0,0,0" IsHitTestVisible="False" />
+                </Grid>
+                <CheckBox x:Name="ShowSystem" Grid.Column="1" Style="{StaticResource Toggle}" Margin="14,0,0,0"
+                          Checked="Filter_Changed" Unchecked="Filter_Changed" VerticalAlignment="Center">
+                    <TextBlock Text="Системные" Foreground="{StaticResource TextMuted}" />
+                </CheckBox>
+            </Grid>
+
+            <Grid Grid.Row="2">
+                <ListBox x:Name="ProcList" Style="{StaticResource List}" ItemContainerStyle="{StaticResource ListItem}" SelectionMode="Multiple"
+                         SelectionChanged="List_SelectionChanged" VirtualizingPanel.IsVirtualizing="True">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="24" />
+                                    <ColumnDefinition Width="32" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="Box" Width="18" Height="18" CornerRadius="5" BorderThickness="1.5"
+                                        BorderBrush="{StaticResource BorderStrong}" Background="Transparent" VerticalAlignment="Center">
+                                    <TextBlock x:Name="Tick" Style="{StaticResource T.Icon}" Text="&#xE73E;" FontSize="11" Foreground="White"
+                                               HorizontalAlignment="Center" Visibility="Hidden" />
+                                </Border>
+                                <Image Grid.Column="1" Source="{Binding Icon}" Width="24" Height="24" HorizontalAlignment="Right"
+                                       RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="2" Margin="12,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Path}" Foreground="{StaticResource TextFaint}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Path}" />
+                                </StackPanel>
+                                <Border Grid.Column="3" Padding="7,2" CornerRadius="5" Background="{StaticResource Bg3}" VerticalAlignment="Center"
+                                        Visibility="{Binding WindowBadge}">
+                                    <TextBlock Text="окно" FontSize="11" Foreground="{StaticResource TextMuted}" />
+                                </Border>
+                            </Grid>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                    <Setter TargetName="Box" Property="Background" Value="{StaticResource Accent}" />
+                                    <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Accent}" />
+                                    <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock x:Name="EmptyText" Text="Загрузка списка процессов…" Foreground="{StaticResource TextMuted}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Grid>
+
+            <Grid Grid.Row="3" Margin="0,14,0,0">
+                <TextBlock x:Name="CountText" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Style="{StaticResource Btn.Secondary}" Content="Отмена" MinWidth="96" Click="Cancel_Click" IsCancel="True" />
+                    <Button x:Name="AddButton" Style="{StaticResource Btn.Primary}" Content="Добавить" MinWidth="110" Margin="10,0,0,0"
+                            Click="Add_Click" IsEnabled="False" IsDefault="True" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,370 @@
+<Window x:Class="MeloWG.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="clr-namespace:MeloWG.Views"
+        Title="Melo WG" Width="960" Height="640" MinWidth="880" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource Bg0}" Foreground="{StaticResource Text}"
+        FontFamily="{StaticResource UiFont}" FontSize="13"
+        Icon="/Assets/app.ico" UseLayoutRounding="True" SnapsToDevicePixels="True"
+        AllowDrop="True">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="44" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <v:BoolToVisibility x:Key="BoolVis" />
+        <v:BoolToVisibility x:Key="InvBoolVis" Invert="True" />
+        <v:NullToVisibility x:Key="NullVis" />
+        <v:InverseBool x:Key="Inverse" />
+    </Window.Resources>
+
+    <Border x:Name="Frame" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- ===== Заголовок ===== -->
+            <Grid>
+                <StackPanel Orientation="Horizontal" Margin="18,0,0,0" VerticalAlignment="Center">
+                    <Image Source="/Assets/app.ico" Width="18" Height="18" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="Melo WG" Margin="10,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="WireGuard · раздельное туннелирование" Margin="10,0,0,0" Foreground="{StaticResource TextFaint}" FontSize="12" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Style="{StaticResource Btn.Caption}" Content="&#xE81C;" FontSize="13" ToolTip="Журнал"
+                            Click="Log_Click" WindowChrome.IsHitTestVisibleInChrome="True" />
+                    <Button Style="{StaticResource Btn.Caption}" Content="&#xE921;" ToolTip="Свернуть"
+                            Click="Minimize_Click" WindowChrome.IsHitTestVisibleInChrome="True" />
+                    <Button Style="{StaticResource Btn.CaptionClose}" Content="&#xE8BB;" ToolTip="Свернуть в трей"
+                            Click="Close_Click" WindowChrome.IsHitTestVisibleInChrome="True" />
+                </StackPanel>
+            </Grid>
+
+            <!-- ===== Содержимое ===== -->
+            <Grid Grid.Row="1" Margin="16,2,16,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="340" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Левая колонка: подключение -->
+                <Border Style="{StaticResource Card}" Padding="20">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" MinHeight="16" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Button x:Name="PowerButton" Style="{StaticResource PowerButton}" Tag="{Binding StateKey}" IsEnabled="{Binding CanToggle}"
+                                HorizontalAlignment="Center" Margin="0,22,0,0" Click="Power_Click" ToolTip="Подключить / отключить" />
+
+                        <TextBlock Grid.Row="1" Text="{Binding StatusTitle}" FontSize="22" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" Margin="0,28,0,0" />
+
+                        <TextBlock Grid.Row="2" Text="{Binding StatusDetail}" HorizontalAlignment="Center" TextAlignment="Center"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" FontSize="13">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasError}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource Danger}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource Success}" />
+                                            <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+                                            <Setter Property="FontSize" Value="14" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <TextBlock Grid.Row="4" Text="ТУННЕЛЬ" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextFaint}" Margin="2,0,0,8" />
+
+                        <Grid Grid.Row="5">
+                            <ToggleButton x:Name="TunnelToggle" Style="{StaticResource TunnelPicker}"
+                                          IsHitTestVisible="{Binding IsOpen, ElementName=TunnelPopup, Converter={StaticResource Inverse}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="34" Height="34" CornerRadius="9" Background="{StaticResource AccentSoft}">
+                                        <TextBlock Style="{StaticResource T.Icon}" Text="&#xE774;" FontSize="16" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SelectedTunnelName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding SelectedTunnelDetail}" Foreground="{StaticResource TextMuted}" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,1,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource T.Icon}" Text="&#xE70E;" FontSize="11" Foreground="{StaticResource TextMuted}" />
+                                </Grid>
+                            </ToggleButton>
+
+                            <Popup x:Name="TunnelPopup" PlacementTarget="{Binding ElementName=TunnelToggle}" Placement="Top"
+                                   HorizontalOffset="-12" VerticalOffset="8"
+                                   IsOpen="{Binding IsChecked, ElementName=TunnelToggle, Mode=TwoWay}"
+                                   StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                                <Border Margin="12" Width="{Binding ActualWidth, ElementName=TunnelToggle}"
+                                        Background="{StaticResource Bg2}" BorderBrush="{StaticResource BorderStrong}" BorderThickness="1"
+                                        CornerRadius="12" Padding="6" Effect="{StaticResource PopupShadow}">
+                                    <StackPanel>
+                                        <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding Tunnels}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Style="{StaticResource Btn.MenuItem}" Click="TunnelItem_Click" Tag="{Binding}">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="20" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock x:Name="Check" Style="{StaticResource T.Icon}" Text="&#xE73E;" FontSize="12"
+                                                                           Foreground="{StaticResource Accent}" Opacity="0" />
+                                                                <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" Margin="6,0,0,0" />
+                                                            </Grid>
+                                                        </Button>
+                                                        <DataTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter TargetName="Check" Property="Opacity" Value="1" />
+                                                            </DataTrigger>
+                                                        </DataTemplate.Triggers>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                        <Border Height="1" Background="{StaticResource BorderStrong}" Margin="6,6"
+                                                Visibility="{Binding HasTunnels, Converter={StaticResource BoolVis}}" />
+                                        <Button Style="{StaticResource Btn.MenuItem}" Click="ImportFile_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource T.Icon}" Text="&#xE8E5;" Width="20" Foreground="{StaticResource TextMuted}" />
+                                                <TextBlock Text="Импорт из файла…" Margin="6,0,0,0" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Style="{StaticResource Btn.MenuItem}" Click="ImportClipboard_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource T.Icon}" Text="&#xE77F;" Width="20" Foreground="{StaticResource TextMuted}" />
+                                                <TextBlock Text="Вставить из буфера обмена" Margin="6,0,0,0" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Style="{StaticResource Btn.MenuItem}" Click="DeleteTunnel_Click" IsEnabled="{Binding CanDeleteTunnel}"
+                                                Visibility="{Binding HasTunnels, Converter={StaticResource BoolVis}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource T.Icon}" Text="&#xE74D;" Width="20" Foreground="{StaticResource Danger}" />
+                                                <TextBlock Text="Удалить выбранный" Margin="6,0,0,0" Foreground="{StaticResource Danger}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </Grid>
+
+                        <!-- Скорость -->
+                        <Grid Grid.Row="6" Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{StaticResource Bg2}" CornerRadius="10" Padding="12,10">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource T.Icon}" Text="&#xE896;" FontSize="12" Foreground="{StaticResource Success}" />
+                                        <TextBlock Text="Загрузка" Foreground="{StaticResource TextMuted}" FontSize="12" Margin="6,0,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding DownSpeed}" FontSize="17" FontWeight="SemiBold" Margin="0,4,0,0" />
+                                    <TextBlock Text="{Binding DownTotal}" Foreground="{StaticResource TextFaint}" FontSize="11" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Background="{StaticResource Bg2}" CornerRadius="10" Padding="12,10">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource T.Icon}" Text="&#xE898;" FontSize="12" Foreground="{StaticResource Accent}" />
+                                        <TextBlock Text="Отдача" Foreground="{StaticResource TextMuted}" FontSize="12" Margin="6,0,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding UpSpeed}" FontSize="17" FontWeight="SemiBold" Margin="0,4,0,0" />
+                                    <TextBlock Text="{Binding UpTotal}" Foreground="{StaticResource TextFaint}" FontSize="11" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Правая колонка: маршрутизация и приложения -->
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="12" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Маршрутизация" Style="{StaticResource T.Title}" />
+                            <Border Margin="0,12,0,0" Background="{StaticResource Bg0}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="10" Padding="1">
+                                <UniformGrid Columns="3">
+                                    <RadioButton Style="{StaticResource Segment}" GroupName="Mode" IsChecked="{Binding IsModeAll}" Content="Весь трафик" />
+                                    <RadioButton Style="{StaticResource Segment}" GroupName="Mode" IsChecked="{Binding IsModeInclude}" Content="Только выбранные" />
+                                    <RadioButton Style="{StaticResource Segment}" GroupName="Mode" IsChecked="{Binding IsModeExclude}" Content="Кроме выбранных" />
+                                </UniformGrid>
+                            </Border>
+                            <TextBlock Text="{Binding ModeDescription}" Style="{StaticResource T.Caption}" Margin="2,10,0,0" />
+                            <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,16" />
+                            <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding LanBypass}">
+                                <StackPanel>
+                                    <TextBlock Text="Локальная сеть напрямую" FontWeight="SemiBold" />
+                                    <TextBlock Text="Роутер, принтеры, NAS и другие устройства домашней сети работают без туннеля"
+                                               Style="{StaticResource T.Caption}" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </CheckBox>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="2" Style="{StaticResource Card}" Padding="18,16,8,8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Margin="0,0,10,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Приложения" Style="{StaticResource T.Title}" VerticalAlignment="Center" />
+                                    <Border Margin="10,0,0,0" Padding="8,2" CornerRadius="6" Background="{StaticResource Bg2}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding AppsCount}" FontSize="11" Foreground="{StaticResource TextMuted}" />
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Style="{StaticResource Btn.Secondary}" Padding="11,6" Click="AddRunning_Click"
+                                            ToolTip="Выбрать из запущенных сейчас программ">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource T.Icon}" Text="&#xE7C4;" FontSize="12" />
+                                            <TextBlock Text="Запущенные" Margin="8,0,0,0" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource Btn.Secondary}" Padding="11,6" Margin="8,0,0,0" Click="AddFile_Click"
+                                            ToolTip="Выбрать .exe на диске (можно ярлык)">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource T.Icon}" Text="&#xE710;" FontSize="12" />
+                                            <TextBlock Text="Обзор…" Margin="8,0,0,0" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Grid.Row="1" Text="{Binding AppsHint}" Style="{StaticResource T.Caption}" Margin="0,8,10,10" />
+
+                            <Border Grid.Row="2" Background="{StaticResource WarningSoft}" CornerRadius="8" Padding="10,7" Margin="0,0,10,10"
+                                    Visibility="{Binding ModeWarning, Converter={StaticResource NullVis}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource T.Icon}" Text="&#xE7BA;" FontSize="12" Foreground="{StaticResource Warning}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ModeWarning}" Foreground="{StaticResource Warning}" FontSize="12" TextWrapping="Wrap" Margin="8,0,0,0" />
+                                </Grid>
+                            </Border>
+
+                            <Grid Grid.Row="3">
+                                <ListBox x:Name="AppsList" ItemContainerStyle="{StaticResource ListItem.Plain}"
+                                         ItemsSource="{Binding Apps}" Padding="0,0,4,0">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="28" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Image Source="{Binding Icon}" Width="24" Height="24" RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Path}" Foreground="{StaticResource TextFaint}" FontSize="11"
+                                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}" Margin="0,1,0,0" />
+                                                </StackPanel>
+                                                <Button x:Name="Remove" Grid.Column="2" Style="{StaticResource Btn.Icon}" Content="&#xE711;" FontSize="11"
+                                                        ToolTip="Убрать из списка" Click="RemoveApp_Click" Tag="{Binding}" Opacity="0" />
+                                            </Grid>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                    <Setter TargetName="Remove" Property="Opacity" Value="1" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                    <ListBox.Style>
+                                        <Style TargetType="ListBox" BasedOn="{StaticResource List}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAppListActive}" Value="False">
+                                                    <Setter Property="Opacity" Value="0.5" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.Style>
+                                </ListBox>
+
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,10,24"
+                                            Visibility="{Binding HasApps, Converter={StaticResource InvBoolVis}}">
+                                    <Border Width="52" Height="52" CornerRadius="14" Background="{StaticResource Bg2}" HorizontalAlignment="Center">
+                                        <TextBlock Style="{StaticResource T.Icon}" Text="&#xE71D;" FontSize="22" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="Список пуст" HorizontalAlignment="Center" FontWeight="SemiBold" Margin="0,12,0,0" />
+                                    <TextBlock Text="Добавьте программу кнопками выше или перетащите .exe либо ярлык в окно"
+                                               Style="{StaticResource T.Caption}" TextAlignment="Center" MaxWidth="280" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- Применение изменений на лету -->
+                    <Border Grid.Row="3" Margin="0,12,0,0" Background="{StaticResource AccentSoft}" BorderBrush="#554C8DFF" BorderThickness="1"
+                            CornerRadius="12" Padding="16,10,10,10" Visibility="{Binding HasPendingChanges, Converter={StaticResource BoolVis}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource T.Icon}" Text="&#xE946;" Foreground="{StaticResource Accent}" />
+                                <TextBlock Text="Настройки изменены — переподключитесь, чтобы применить" Margin="10,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Style="{StaticResource Btn.Primary}" Content="Применить" Click="Apply_Click" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Подсветка при перетаскивании файлов -->
+            <Border x:Name="DropOverlay" Grid.RowSpan="2" Visibility="Collapsed" Background="#CC0D1117" IsHitTestVisible="False">
+                <Border Margin="24" CornerRadius="16" BorderBrush="{StaticResource Accent}" BorderThickness="2">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Style="{StaticResource T.Icon}" Text="&#xE896;" FontSize="34" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Отпустите файл" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,12,0,0" />
+                        <TextBlock Text=".conf — импорт туннеля,  .exe или ярлык — в список приложений" Foreground="{StaticResource TextMuted}"
+                                   HorizontalAlignment="Center" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
