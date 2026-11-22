@@ -182,6 +182,21 @@ internal static class Program
             built.Add(("DualStack/Exclude/noIPv6", json));
         });
 
+        Section("Фильтр журнала");
+        Test("строки о соединениях отбрасываются, служебные и ошибки остаются", () =>
+        {
+            True(CoreRunner.IsPerConnectionInfo("INFO[0003] [1225065473 0ms] router: pre-match: forward tcp connection from 198.18.0.1 to 194.146.223.205 via outbound/wireguard[wg]"));
+            True(CoreRunner.IsPerConnectionInfo("INFO[0003] [3761140443 0ms] inbound/tun[tun-in]: inbound DNS packet from [fdfe:dcba:9876::1]:52788"));
+            True(CoreRunner.IsPerConnectionInfo("INFO[0022] [838729549 214ms] dns: exchanged A ssb-euw1.smartadserver.com. 12 IN A 89.149.193.83"));
+            True(CoreRunner.IsPerConnectionInfo("DEBUG[0001] [7 0ms] router: match[3] process_path_regex => route(wg)"));
+            False(CoreRunner.IsPerConnectionInfo("INFO[0001] sing-box started (1.71s)"));
+            False(CoreRunner.IsPerConnectionInfo("INFO[0001] inbound/tun[tun-in]: started at MeloWG"));
+            False(CoreRunner.IsPerConnectionInfo("INFO[0001] network: updated default interface Ethernet, index 16"));
+            False(CoreRunner.IsPerConnectionInfo("ERROR[0012] [123 5s] connection: open connection to 1.2.3.4:443 using outbound/wireguard[wg]: i/o timeout"));
+            False(CoreRunner.IsPerConnectionInfo("WARN[0012] [123 0ms] dns: lookup failed"));
+            False(CoreRunner.IsPerConnectionInfo("[клиент] подключено"));
+        });
+
         Section("DPAPI");
         Test("шифрование туда и обратно", () =>
         {
@@ -328,10 +343,15 @@ internal static class Program
         bool crashed = false;
         runner.Crashed += _ => crashed = true;
 
+        bool sawStarted = false;
         for (int cycle = 1; cycle <= 2; cycle++)
         {
+            // Цикл 1 — обычный журнал, цикл 2 — подробный.
+            runner.Verbose = cycle == 2;
+            lock (log) log.Clear();
             await runner.StartAsync(json);
             True(runner.IsRunning);
+            lock (log) sawStarted |= log.Any(l => l.Contains("sing-box started"));
 
             using var mon = new TrafficMonitor();
             int samples = 0;
@@ -342,6 +362,14 @@ internal static class Program
             mon.Stop();
             if (samples == 0) throw new Exception("нет данных от /traffic");
 
+            // Соединение через HTTP-прокси ядра: в журнале ядра появляются строки «[id …ms] inbound connection …».
+            await ProxyConnectAsync(proxyPort, apiPort);
+            await System.Threading.Tasks.Task.Delay(700);
+            int perConnection;
+            lock (log) perConnection = log.Count(CoreRunner.IsPerConnectionInfo);
+            if (cycle == 1 && perConnection > 0) throw new Exception($"обычный журнал пропустил {perConnection} строк о соединениях");
+            if (cycle == 2 && perConnection == 0) throw new Exception("подробный журнал не показал строки о соединении");
+
             sw.Restart();
             await runner.StopAsync();
             False(runner.IsRunning);
@@ -349,8 +377,21 @@ internal static class Program
             if (sw.Elapsed > TimeSpan.FromSeconds(5)) throw new Exception($"цикл {cycle}: остановка заняла {sw.Elapsed.TotalSeconds:F1} с — Ctrl+C не сработал");
         }
         False(crashed);
-        lock (log)
-            if (!log.Any(l => l.Contains("sing-box started"))) throw new Exception("нет строки о запуске в журнале");
+        if (!sawStarted) throw new Exception("нет строки о запуске в журнале");
+    }
+
+    private static async System.Threading.Tasks.Task ProxyConnectAsync(int proxyPort, int targetPort)
+    {
+        using var tcp = new System.Net.Sockets.TcpClient();
+        await tcp.ConnectAsync(System.Net.IPAddress.Loopback, proxyPort);
+        var stream = tcp.GetStream();
+        byte[] req = Encoding.ASCII.GetBytes($"CONNECT 127.0.0.1:{targetPort} HTTP/1.1\r\nHost: 127.0.0.1:{targetPort}\r\n\r\n");
+        await stream.WriteAsync(req);
+        var buf = new byte[512];
+        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+        int n = await stream.ReadAsync(buf, cts.Token);
+        string resp = Encoding.ASCII.GetString(buf, 0, n);
+        if (!resp.Contains(" 200")) throw new Exception("CONNECT через прокси ядра не прошёл: " + resp.Trim());
     }
 
     private static int FreePort()

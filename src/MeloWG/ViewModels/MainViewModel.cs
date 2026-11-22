@@ -58,6 +58,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly DispatcherTimer _clock;
     private readonly AppSettings _settings;
     private readonly List<string> _log = new();
+    private readonly List<string> _pendingLog = new();
+    private readonly DispatcherTimer _logFlush;
 
     private ConnState _state;
     private TunnelItem? _selectedTunnel;
@@ -79,6 +81,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _clock = new DispatcherTimer(DispatcherPriority.Background, ui) { Interval = TimeSpan.FromSeconds(1) };
         _clock.Tick += (_, _) => OnPropertyChanged(nameof(StatusDetail));
 
+        // Журнал уходит в окно пачками: сотни строк в секунду по одной заметно тормозили бы интерфейс.
+        _logFlush = new DispatcherTimer(DispatcherPriority.Background, ui) { Interval = TimeSpan.FromMilliseconds(200) };
+        _logFlush.Tick += (_, _) => FlushLog();
+        _logFlush.Start();
+
         _core.LogLine += line => AppendLog(line);
         _core.Crashed += reason => _ui.BeginInvoke(() => OnCoreCrashed(reason));
         _traffic.Sample += (up, down) => _ui.BeginInvoke(() => OnTraffic(up, down));
@@ -92,8 +99,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     // ---------- События для окна ----------
 
-    /// <summary>Новая строка журнала (поток UI).</summary>
-    public event Action<string>? LogAppended;
+    /// <summary>Новые строки журнала, пачкой (поток UI).</summary>
+    public event Action<IReadOnlyList<string>>? LogAppended;
 
     /// <summary>Ошибка, которую нужно показать пользователю: заголовок, текст.</summary>
     public event Action<string, string>? ErrorRaised;
@@ -511,14 +518,41 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     // ---------- Журнал ----------
 
-    public IReadOnlyList<string> LogSnapshot()
+    /// <summary>
+    /// Весь журнал для окна, которое только что открылось. Очередь неотправленных строк сбрасывается
+    /// под той же блокировкой — иначе они пришли бы в окно второй раз со следующей пачкой.
+    /// </summary>
+    public IReadOnlyList<string> TakeLogSnapshot()
     {
-        lock (_log) return _log.ToList();
+        lock (_log)
+        {
+            _pendingLog.Clear();
+            return _log.ToList();
+        }
     }
 
     public void ClearLog()
     {
-        lock (_log) _log.Clear();
+        lock (_log)
+        {
+            _log.Clear();
+            _pendingLog.Clear();
+        }
+    }
+
+    /// <summary>Показывать в журнале каждое соединение и DNS-запрос. Не сохраняется между запусками.</summary>
+    public bool VerboseLog
+    {
+        get => _core.Verbose;
+        set
+        {
+            if (_core.Verbose == value) return;
+            _core.Verbose = value;
+            OnPropertyChanged();
+            AppendLog(value
+                ? "[клиент] подробный журнал включён: видны все соединения и DNS-запросы"
+                : "[клиент] подробный журнал выключен");
+        }
     }
 
     private void AppendLog(string line)
@@ -528,9 +562,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             _log.Add(stamped);
             if (_log.Count > MaxLogLines) _log.RemoveRange(0, _log.Count - MaxLogLines);
+            _pendingLog.Add(stamped);
+            // Если окно журнала долго не забирает строки, хвост всё равно есть в _log.
+            if (_pendingLog.Count > MaxLogLines) _pendingLog.RemoveRange(0, _pendingLog.Count - MaxLogLines);
         }
-        if (_ui.CheckAccess()) LogAppended?.Invoke(stamped);
-        else _ui.BeginInvoke(() => LogAppended?.Invoke(stamped));
+    }
+
+    private void FlushLog()
+    {
+        List<string> batch;
+        lock (_log)
+        {
+            if (_pendingLog.Count == 0) return;
+            batch = new List<string>(_pendingLog);
+            _pendingLog.Clear();
+        }
+        LogAppended?.Invoke(batch);
     }
 
     // ---------- Прочее ----------
@@ -578,6 +625,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _clock.Stop();
+        _logFlush.Stop();
         _traffic.Dispose();
         _core.Dispose();
     }

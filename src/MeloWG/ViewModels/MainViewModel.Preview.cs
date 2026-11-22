@@ -19,5 +19,7 @@ public sealed partial class MainViewModel
         NotifyTraffic();
         UpdatePending();
     }
+
+    internal void PreviewLog(string line) => AppendLog(line);
 }
 #endif

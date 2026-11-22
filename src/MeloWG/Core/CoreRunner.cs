@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,9 +26,14 @@ public sealed class CoreRunner : IDisposable
     private readonly object _sync = new();
     private readonly Queue<string> _recentProblems = new();
 
+    // «INFO[0003] [1225065473 0ms] router: …» — строка об отдельном соединении или DNS-запросе.
+    private static readonly Regex PerConnectionLine =
+        new(@"^(?:TRACE|DEBUG|INFO)\[\d+\]\s+\[\d+\s", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private Process? _process;
     private TaskCompletionSource<bool>? _started;
     private bool _stopRequested;
+    private volatile bool _verbose;
 
     public CoreRunner(string exePath, string workDir)
     {
@@ -48,6 +54,19 @@ public sealed class CoreRunner : IDisposable
     }
 
     public string ExePath => _exePath;
+
+    /// <summary>
+    /// Передавать в журнал строки о каждом соединении и DNS-запросе. Их сотни в секунду,
+    /// а в сумме это история посещённых сайтов, поэтому по умолчанию они отбрасываются.
+    /// Предупреждения и ошибки проходят всегда.
+    /// </summary>
+    public bool Verbose
+    {
+        get => _verbose;
+        set => _verbose = value;
+    }
+
+    public static bool IsPerConnectionInfo(string line) => PerConnectionLine.IsMatch(line);
 
     public async Task StartAsync(string configJson, CancellationToken ct = default)
     {
@@ -201,6 +220,7 @@ public sealed class CoreRunner : IDisposable
         if (line.Contains("sing-box started", StringComparison.Ordinal))
             _started?.TrySetResult(true);
 
+        if (!_verbose && IsPerConnectionInfo(line)) return;
         LogLine?.Invoke(line);
     }
 

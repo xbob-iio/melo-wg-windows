@@ -93,6 +93,22 @@ internal static class PreviewRenderer
             Save(picker, Path.Combine(outDir, "06-picker.png"));
             picker.Close();
 
+            foreach (string l in new[]
+                     {
+                         "[клиент] подключение: «Нидерланды», режим: кроме выбранных, приложений в списке: 5, локальная сеть напрямую: да",
+                         "INFO[0001] inbound/tun[tun-in]: started at MeloWG",
+                         "INFO[0001] network: updated default interface Ethernet, index 16",
+                         "INFO[0001] clash-api: restful api listening at 127.0.0.1:54380",
+                         "INFO[0001] sing-box started (1.71s)",
+                         "[клиент] подключено",
+                     })
+                vm.PreviewLog(l);
+            var log = new LogWindow(vm) { WindowStartupLocation = WindowStartupLocation.Manual, Left = -32000, Top = -32000, ShowActivated = false };
+            log.Show();
+            await Settle(500);
+            Save(log, Path.Combine(outDir, "07-log.png"));
+            log.Close();
+
             main.AllowClose();
             main.Close();
         }

@@ -18,11 +18,21 @@
             </Grid.RowDefinitions>
 
             <Grid>
-                <StackPanel VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
                     <TextBlock Text="Журнал" FontSize="15" FontWeight="SemiBold" />
-                    <TextBlock Text="События клиента и ядра sing-box — пригодится, если что-то не работает" Foreground="{StaticResource TextMuted}" FontSize="12" />
+                    <TextBlock Text="События клиента и ядра sing-box — пригодится, если что-то не работает" Foreground="{StaticResource TextMuted}"
+                               FontSize="12" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <CheckBox Style="{StaticResource Toggle}" IsChecked="{Binding VerboseLog}" Margin="0,0,18,0" VerticalAlignment="Center"
+                              WindowChrome.IsHitTestVisibleInChrome="True"
+                              ToolTip="Показывать каждое соединение и DNS-запрос: видно, какая программа и по какому правилу пошла в туннель или мимо него. Строк много, поэтому режим сбрасывается при перезапуске клиента.">
+                        <TextBlock Text="Подробно" Foreground="{StaticResource TextMuted}" />
+                    </CheckBox>
                     <Button Style="{StaticResource Btn.Secondary}" Padding="11,6" Click="Copy_Click" WindowChrome.IsHitTestVisibleInChrome="True">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource T.Icon}" Text="&#xE8C8;" FontSize="12" />
